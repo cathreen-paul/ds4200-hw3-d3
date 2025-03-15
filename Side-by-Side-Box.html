@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Boxplot of Likes Across Platforms</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+        }
+        svg {
+            margin: 20px;
+        }
+        .x-axis text, .y-axis text {
+            font-size: 14px;
+        }
+        .box {
+            fill: lightblue;
+        }
+        .median-line {
+            stroke: black;
+            stroke-width: 2;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Side-by-Side Boxplot of Likes Across Platforms</h1>
+    <svg width="800" height="500"></svg>
+
+    <script>
+        // Load the social media data from CSV file
+        d3.csv("socialMediaData.csv").then(function (data) {
+            // Convert Likes to numeric type
+            data.forEach(function (d) {
+                d.Likes = +d.Likes;
+            });
+
+            // Set up the dimensions and margins for the SVG
+            let width = 800, height = 500;
+            let margin = { top: 60, bottom: 60, right: 60, left: 60 };
+
+            let svg = d3.select("svg")
+                .attr("width", width)
+                .attr("height", height)
+                .style("background", "#f4f4f4");
+
+            // Set up scales for the axes
+            let xscale = d3.scaleBand()
+                .domain(["Platform1", "Platform2", "Platform3", "Platform4"]) // Adjust platform names as per your data
+                .range([margin.left, width - margin.right])
+                .padding(0.5);
+
+            let yscale = d3.scaleLinear()
+                .domain([0, d3.max(data, (d) => d.Likes)])
+                .range([height - margin.bottom, margin.top]);
+
+            // Create axes
+            svg.append("g")
+                .attr("transform", `translate(${margin.left}, 0)`)
+                .call(d3.axisLeft(yscale).ticks(5));
+
+            svg.append("g")
+                .attr("transform", `translate(0, ${height - margin.bottom})`)
+                .call(d3.axisBottom(xscale));
+
+            // Add axis labels
+            svg.append("text")
+                .attr("x", width / 2)
+                .attr("y", height - 10)
+                .attr("text-anchor", "middle")
+                .text("Platform");
+
+            svg.append("text")
+                .attr("transform", "rotate(-90)")
+                .attr("x", -height / 2)
+                .attr("y", 15)
+                .attr("text-anchor", "middle")
+                .text("Likes");
+
+            // Calculate the quartiles and draw the boxplots
+            let platforms = ["Platform1", "Platform2", "Platform3", "Platform4"]; // Adjust platform names as per your data
+
+            platforms.forEach(function (platform, index) {
+                let platformData = data.filter(d => d.Platform === platform);
+                
+                // Sort the data by Likes
+                platformData.sort((a, b) => d3.ascending(a.Likes, b.Likes));
+
+                // Calculate the quartiles (Q1, median, Q3)
+                let q1 = d3.quantile(platformData.map(d => d.Likes), 0.25);
+                let median = d3.quantile(platformData.map(d => d.Likes), 0.5);
+                let q3 = d3.quantile(platformData.map(d => d.Likes), 0.75);
+                let iqr = q3 - q1;
+                let min = d3.min(platformData, d => d.Likes);
+                let max = d3.max(platformData, d => d.Likes);
+
+                // Set up the box dimensions
+                let x = xscale(platform);
+                let boxWidth = xscale.bandwidth();
+
+                // Draw the box (rectangular part)
+                svg.append("rect")
+                    .attr("x", x)
+                    .attr("y", yscale(q3))
+                    .attr("width", boxWidth)
+                    .attr("height", yscale(q1) - yscale(q3))
+                    .attr("class", "box");
+
+                // Draw the median line
+                svg.append("line")
+                    .attr("x1", x)
+                    .attr("x2", x + boxWidth)
+                    .attr("y1", yscale(median))
+                    .attr("y2", yscale(median))
+                    .attr("class", "median-line");
+
+                // Draw the vertical line from min to max
+                svg.append("line")
+                    .attr("x1", x + boxWidth / 2)
+                    .attr("x2", x + boxWidth / 2)
+                    .attr("y1", yscale(min))
+                    .attr("y2", yscale(max))
+                    .attr("stroke", "black")
+                    .attr("stroke-width", 2);
+            });
+
+        });
+    </script>
+
+</body>
+</html>

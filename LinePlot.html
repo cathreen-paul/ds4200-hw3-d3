@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Social Media Average Likes over Time</title>
+  <script src="https://d3js.org/d3.v7.min.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+    }
+    svg {
+      background-color: lightgreen;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>Social Media Average Likes over Time</h1>
+
+  <script>
+    // Load the data and process it
+    d3.csv("socialMedia.csv").then(function (data) {
+      // Group data and calculate averages
+      const groupedData = d3.rollup(
+        data,
+        (posts) => {
+          const totalLikes = d3.sum(posts, (d) => parseFloat(d.Likes));
+          const count = posts.length;
+          return totalLikes / count;
+        },
+        (d) => d.Date
+      );
+
+      // Format the data for charting
+      const transformedData = Array.from(groupedData, ([date, avgLikes]) => ({
+        Date: date,
+        AvgLikes: avgLikes,
+      }));
+
+      transformedData.sort((a, b) => new Date(a.Date) - new Date(b.Date));
+
+      // Log the transformed data (optional)
+      console.log(transformedData);
+
+      // Now use the transformed data to render the chart
+      // Define the dimensions and margins for the SVG
+      let width = 600,
+          height = 400;
+
+      let margin = { top: 60, bottom: 60, right: 60, left: 60 };
+
+      // Create the SVG container
+      let svg = d3
+        .select("body")
+        .append("svg")
+        .attr("width", width)
+        .attr("height", height)
+        .style("background", "lightgreen");
+
+      // Set up scales for x and y axes
+      let yscale = d3
+        .scaleLinear()
+        .domain([0, d3.max(transformedData, (d) => d.AvgLikes)])
+        .range([height - margin.bottom, margin.top]);
+
+      let xscale = d3
+        .scaleBand()
+        .domain(transformedData.map((d) => d.Date))
+        .range([margin.left, width - margin.right])
+        .padding(0.5);
+
+      // Draw the axis
+      let yaxis = svg
+        .append("g")
+        .call(d3.axisLeft().scale(yscale))
+        .attr("transform", `translate(${margin.left},0)`);
+
+      let xaxis = svg
+        .append("g")
+        .call(d3.axisBottom().scale(xscale))
+        .attr("transform", `translate(0, ${height - margin.bottom})`);
+
+      // Add x-axis label
+      svg
+        .append("text")
+        .attr("x", width / 2)
+        .attr("y", height - 10)
+        .attr("text-anchor", "middle")
+        .text("Date");
+
+      // Add y-axis label
+      svg
+        .append("text")
+        .attr("transform", "rotate(-90)")
+        .attr("x", -height / 2)
+        .attr("y", 15)
+        .attr("text-anchor", "middle")
+        .text("Average Likes");
+
+      // Draw the line path
+      let line = d3
+        .line()
+        .x((d) => xscale(d.Date) + xscale.bandwidth() / 2)
+        .y((d) => yscale(d.AvgLikes))
+        .curve(d3.curveNatural);
+
+      let path = svg
+        .append("path")
+        .datum(transformedData)
+        .attr("fill", "none")
+        .attr("stroke", "black")
+        .attr("stroke-width", 2)
+        .attr("d", line);
+    });
+  </script>
+
+</body>
+</html>
